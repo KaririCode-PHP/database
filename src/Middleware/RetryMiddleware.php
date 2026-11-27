@@ -14,13 +14,27 @@ use KaririCode\Database\Exception\ConnectionException;
 use KaririCode\Database\Resilience\TransientFailureRetryPolicy;
 use KaririCode\Database\ValueObject\ConnectionParams;
 
-// ── RetryMiddleware ──────────────────────────────────────────────────
-//
-// Retries on transient failures: deadlock and connectionLost.
-// Must wrap TenancyMiddleware so reconnections re-execute
-// SET search_path (see ADR-002 ordering constraint).
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Retries a connect that failed for a transient reason (refused, lost or
+ * full server) with backoff from a RetryPolicy. Only the connect is
+ * retried: no statement has run yet, so a retry cannot repeat a write.
+ *
+ * Preconditions: wrap TenancyMiddleware (ADR-002), so each attempt runs
+ * the tenant switch again. Wrong credentials and an unknown database are
+ * ConfigurationException and are not retried.
+ *
+ * Thread-safety: stateless; safe to share.
+ *
+ * Side effects: sleeps between attempts (usleep()).
+ *
+ * Example:
+ *
+ *     $factory = new ConnectionFactory([new RetryMiddleware(new TransientFailureRetryPolicy(maxAttempts: 5))]);
+ *
+ * References: ADR-002; Spec V4.3.3 §31 (Contract\Resilience\RetryPolicy).
+ *
+ * @see https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
+ */
 final class RetryMiddleware implements Middleware
 {
     public function __construct(

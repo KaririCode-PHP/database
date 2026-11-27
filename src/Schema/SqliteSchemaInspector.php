@@ -13,6 +13,28 @@ use KaririCode\Database\ValueObject\IndexMetadata;
 use KaririCode\Database\Type\ScalarValue;
 use KaririCode\Database\ValueObject\ResultRow;
 
+/**
+ * Reads tables, columns, indexes and foreign keys of a SQLite database
+ * through the pragma table-valued functions, with the table name bound as
+ * a parameter, never written into the SQL. Defaults come back as values:
+ * 'open' without quotes, an explicit NULL as null.
+ *
+ * Preconditions: SQLite has no schemas, so $schema is ignored; a lower- or
+ * upper-case INTEGER PRIMARY KEY is the rowid and reads as auto-increment.
+ *
+ * Thread-safety: holds a connection; not safe to share.
+ *
+ * Side effects: runs catalog queries.
+ *
+ * Example:
+ *
+ *     $inspector = new SqliteSchemaInspector($connection);
+ *     $keys = $inspector->listTableForeignKeys('order_items');
+ *
+ * References: ADR-008; SPEC-001 §2.1.
+ *
+ * @see https://www.sqlite.org/pragma.html#pragfunc
+ */
 final class SqliteSchemaInspector implements SchemaInspector
 {
     public function __construct(
@@ -42,7 +64,7 @@ final class SqliteSchemaInspector implements SchemaInspector
                 name: $row->string('name'),
                 type: $row->string('type'),
                 nullable: $row->int('notnull') === 0,
-                default: $row->nullableString('dflt_value'),
+                default: self::literalDefault($row->nullableString('dflt_value')),
                 autoIncrement: $row->int('pk') > 0 && strtoupper($row->string('type')) === 'INTEGER',
             );
         }
@@ -114,5 +136,19 @@ final class SqliteSchemaInspector implements SchemaInspector
         );
 
         return $result->fetchOne() !== false;
+    }
+
+    /**
+     * PRAGMA table_info gives the default as written in the DDL: 'open'
+     * with its quotes, NULL for an explicit NULL default. The literal is
+     * returned bare, as MySQL reports it; expressions stay as written.
+     */
+    private static function literalDefault(?string $default): ?string
+    {
+        if ($default === null || strtoupper($default) === 'NULL') {
+            return null;
+        }
+
+        return preg_match("/\\A'(.*)'\\z/s", $default, $literal) === 1 ? str_replace("''", "'", $literal[1]) : $default;
     }
 }

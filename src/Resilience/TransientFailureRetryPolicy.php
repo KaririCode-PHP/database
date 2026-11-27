@@ -8,24 +8,29 @@ use KaririCode\Contract\Resilience\RetryPolicy;
 use KaririCode\Database\Exception\ConnectionException;
 use KaririCode\Database\Exception\QueryException;
 
-// ── TransientFailureRetryPolicy ──────────────────────────────────────
-
 /**
  * Decides which database failures are worth another attempt and how long
- * to wait: connection failures, deadlocks (6035) and lock timeouts (6036).
- * Configuration errors (bad credentials, unknown database) never retry.
+ * to wait: connection failures and losses, deadlocks (6035) and lock
+ * timeouts (6036). Configuration errors (bad credentials, unknown
+ * database) never retry.
  *
- * Preconditions: $maxAttempts >= 1; delays >= 0 (negative values act as 0).
- * Side effects: delayMilliseconds() draws from random_int() (CSPRNG).
+ * Preconditions: $maxAttempts counts the first attempt (3 means two
+ * retries); negative delays act as 0.
+ *
  * Thread-safety: immutable; safe to share.
  *
+ * Side effects: delayMilliseconds() draws from random_int() (CSPRNG).
+ *
  * The delay uses "full jitter": uniform between 0 and the exponential
- * ceiling, which spreads retries from many clients (Brooker, 2015).
+ * ceiling, which spreads the retries of many clients.
  *
  * Example:
- *   $retry = new RetryMiddleware(new TransientFailureRetryPolicy(maxAttempts: 5));
  *
- * Spec V4.3.3 §31: typed against Contract\Resilience\RetryPolicy (contract 2.10.0).
+ *     $retry = new RetryMiddleware(new TransientFailureRetryPolicy(maxAttempts: 5));
+ *
+ * References: Spec V4.3.3 §31 (Contract\Resilience\RetryPolicy, contract
+ * 2.10.0); Brooker (2015) on backoff and jitter.
+ *
  * @see https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
  * @since 4.3.0
  */

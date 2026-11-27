@@ -8,6 +8,25 @@ use KaririCode\Database\Contract\Platform;
 use KaririCode\Database\Contract\TypeConverter;
 use KaririCode\Database\Exception\TypeConversionException;
 
+/**
+ * Stores a time of day as 'H:i:s': TIME on the servers, text on SQLite. It
+ * is read back on 1970-01-01 in PHP's default time zone.
+ *
+ * Preconditions: the value is a \DateTimeInterface; its date is ignored
+ * and fractions of a second are dropped.
+ *
+ * Thread-safety: stateless.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     (new TimeType())->convertToDatabaseValue(new \DateTimeImmutable('08:30'), $platform);   // '08:30:00'
+ *
+ * References: ADR-007; SPEC-001 §2.4.
+ *
+ * @see https://www.postgresql.org/docs/current/datatype-datetime.html
+ */
 final readonly class TimeType implements TypeConverter
 {
     private const FORMAT = 'H:i:s';

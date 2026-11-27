@@ -53,6 +53,46 @@ final class SpecRulesTest extends TestCase
         self::assertSame([], $bad);
     }
 
+    /**
+     * §17: each type states its domain role (C1), preconditions and
+     * thread-safety (C2), side effects (C3), an example (C4) and references
+     * with a link (C5), without authorship tags.
+     */
+    public function testDocblocksMeetTheFiveCriteria(): void
+    {
+        $markers = [
+            'preconditions (C2)' => 'Preconditions',
+            'thread-safety (C2)' => 'Thread-safety:',
+            'side effects (C3)' => 'Side effects:',
+            'example (C4)' => 'Example',
+            'references (C5)' => 'References:',
+            'link (C5)' => '@see https://',
+        ];
+        $missing = [];
+
+        foreach ($this->classes() as $class) {
+            $type = new \ReflectionClass($class);
+            $docblock = (string) $type->getDocComment();
+
+            foreach ($markers as $criterion => $marker) {
+                if (!str_contains($docblock, $marker)) {
+                    $missing[] = $type->getShortName() . ': ' . $criterion;
+                }
+            }
+
+            if (preg_match('/@(?:package|author|license|copyright|version)\b/', $docblock) === 1) {
+                $missing[] = $type->getShortName() . ': authorship tag';
+            }
+
+            if (preg_match('/\A\/\*\*\s+\*\s+Represents\b/', $docblock) === 1) {
+                $missing[] = $type->getShortName() . ': C1 states the domain role, not "Represents"';
+            }
+        }
+
+        self::assertSame([], $missing);
+        self::assertCount(92, $this->classes(), 'every source file declares one loadable type');
+    }
+
     /** @return list<class-string> */
     private function classes(): array
     {

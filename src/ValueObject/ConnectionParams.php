@@ -5,7 +5,29 @@ declare(strict_types=1);
 namespace KaririCode\Database\ValueObject;
 
 use KaririCode\Database\Enum\DriverType;
+use KaririCode\Database\Exception\ConfigurationException;
 
+/**
+ * Everything needed to open a connection: driver, host, port, database,
+ * credentials, charset, free options and PDO attributes. The password can
+ * be read but is masked in var_dump() and stack traces.
+ *
+ * Preconditions: driver is pdo_mysql, pdo_pgsql or pdo_sqlite (6020 from
+ * driverType() otherwise); driverOptions are PDO attributes keyed by their
+ * PDO::ATTR_* constant and replace the driver's defaults key by key.
+ *
+ * Thread-safety: immutable.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     $params = new ConnectionParams(driver: 'pdo_pgsql', host: 'db', port: 5432, database: 'shop', username: 'app', password: $secret);
+ *
+ * References: ADR-011 (DSN parser); SPEC-001 §3.
+ *
+ * @see https://www.php.net/manual/en/class.sensitiveparameter.php
+ */
 final readonly class ConnectionParams
 {
     /**
@@ -27,7 +49,7 @@ final readonly class ConnectionParams
 
     public function driverType(): DriverType
     {
-        return DriverType::from($this->driver);
+        return DriverType::tryFrom($this->driver) ?? throw ConfigurationException::unknownDriver();
     }
 
     public function __debugInfo(): array

@@ -6,7 +6,7 @@
 
 ## Context
 
-4.4.0 kept PHPUnit, PHPStan, Psalm, PHP-CS-Fixer and Infection in `require-dev`, plus PHPMD, which no script ran. The ecosystem now installs its toolchain with KaririCode Devkit, and Devkit 1.2.1 runs a component's committed configs (`'root_configs' => true`), so the §29.1 gates move without weakening.
+The 4.4.0 reviewed on 2026-10-04 kept PHPUnit, PHPStan, Psalm, PHP-CS-Fixer and Infection in `require-dev`, plus PHPMD, which no script ran. The ecosystem now installs its toolchain with KaririCode Devkit, and Devkit 1.2.1 runs a component's committed configs (`'root_configs' => true`), so the §29.1 gates move without weakening.
 
 The first run with a coverage driver also measured what QD-V433 could not: the mutation score is 60%, below the 80% of §19.4.
 
@@ -30,3 +30,9 @@ The first run with a coverage driver also measured what QD-V433 could not: the m
 
 - One toolchain model across the ecosystem.
 - §19.4 is not met yet: 265 escaped mutants, most in `SqlQueryBuilder`, `DefaultConnection`, `TransientFailureRetryPolicy`, `LoggingMiddleware` and the exception converters. Raising the floor is part of the next release.
+
+## Amendment — 2026-11-27: the floor goes back to 80
+
+Tests written against the escaped mutants found two bugs (user `driverOptions` renumbered by the array spread in the three PDO drivers; `SqlQueryBuilder::values()` never bound its values), and the server suites added for PostgreSQL 16 and MariaDB 10.11 found the rest fixed in 4.4.0 (CHANGELOG). With both servers the score is 87%: 1409 mutants, 1210 killed, 15 errors, 2 time-outs, 182 escaped. `composer infection` no longer passes `--min-msi=60 --min-covered-msi=60`, so the 80% of §19.4 in `infection.json5` applies, and the open item of QD-V433 is closed.
+
+CI runs the gates with both servers as service containers, so the mutation run covers the vendor code paths too; without them the server tests are skipped and the platform and inspector code of MySQL and PostgreSQL is mutated without tests that reach it. Most of the mutants left are equivalent: the `hrtime()` divisor of the timings, the `usleep()` of `RetryMiddleware`, version thresholds no supported server sits on, and vendor-table rows the SQLSTATE class already maps.

@@ -11,17 +11,27 @@ use KaririCode\Database\Contract\Statement;
 use KaririCode\Database\Contract\Result;
 use KaririCode\Database\ValueObject\ConnectionParams;
 
-// ── TenancyMiddleware ────────────────────────────────────────────────
-//
-// Executes a SQL statement on every connect() — typically
-// SET search_path TO ? (PostgreSQL) or USE ? (MySQL).
-//
-// Must be the innermost middleware so reconnections from
-// RetryMiddleware re-execute the schema switch.
-//
-// Ref: ADR-002 ordering constraint.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Points each new session at the current tenant: SET search_path on
+ * PostgreSQL, USE on MySQL, with the schema name quoted. SQLite has no
+ * schemas, so nothing runs there.
+ *
+ * Preconditions: the resolver returns the tenant's schema or database
+ * name, or null or '' for none. It runs on every connect, so it must be
+ * cheap.
+ *
+ * Thread-safety: holds only the resolver; as safe as the resolver.
+ *
+ * Side effects: runs one statement per connect.
+ *
+ * Example:
+ *
+ *     $factory = new ConnectionFactory([new RetryMiddleware(), new TenancyMiddleware(static fn(): ?string => $tenantContext->schema())]);
+ *
+ * References: ADR-002 (innermost, after Retry); SPEC-001 §2.1.
+ *
+ * @see https://www.postgresql.org/docs/current/ddl-schemas.html#DDL-SCHEMAS-PATH
+ */
 final class TenancyMiddleware implements Middleware
 {
     /** @param \Closure(): ?string $schemaResolver Returns current tenant schema or null */

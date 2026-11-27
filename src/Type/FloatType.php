@@ -7,6 +7,25 @@ namespace KaririCode\Database\Type;
 use KaririCode\Database\Contract\Platform;
 use KaririCode\Database\Contract\TypeConverter;
 
+/**
+ * Stores double-precision floats: DOUBLE PRECISION on PostgreSQL, DOUBLE
+ * elsewhere.
+ *
+ * Preconditions: the value is a float, an integer or a numeric string; for
+ * exact amounts use DecimalType.
+ *
+ * Thread-safety: stateless.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     (new FloatType())->convertToPhpValue('1.5', $platform);   // 1.5
+ *
+ * References: ADR-007; SPEC-001 §2.4.
+ *
+ * @see https://www.postgresql.org/docs/current/datatype-numeric.html#DATATYPE-FLOAT
+ */
 final readonly class FloatType implements TypeConverter
 {
     #[\Override]

@@ -415,6 +415,7 @@ Range **6000–6199**. Generated from `src/Exception`; `ExceptionConformanceTest
 | 6017 | `ConfigurationException` | `unknownDsnScheme()` | Configuration | Unknown DSN scheme. |
 | 6018 | `ConfigurationException` | `connectionNotConfigured()` | Configuration | No connection is configured under the requested name. |
 | 6019 | `ConfigurationException` | `invalidCharset()` | Configuration | Invalid charset: only letters, digits, hyphen and underscore are allowed. |
+| 6020 | `ConfigurationException` | `unknownDriver()` | Configuration | Unknown driver: the supported drivers are pdo_mysql, pdo_pgsql and pdo_sqlite. |
 | 6030 | `QueryException` | `syntaxError()` | Runtime | The statement has a syntax error or violates an access rule. |
 | 6031 | `QueryException` | `constraintViolation()` | Runtime | An integrity constraint was violated. |
 | 6032 | `QueryException` | `uniqueViolation()` | Runtime | A unique constraint was violated. |

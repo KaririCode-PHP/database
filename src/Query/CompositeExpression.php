@@ -4,11 +4,25 @@ declare(strict_types=1);
 
 namespace KaririCode\Database\Query;
 
-// ── CompositeExpression ──────────────────────────────────────────────
-//
-// AND/OR composition of expressions. Stringable for use in WHERE.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * A group of predicates joined by AND or OR, which may nest; a group of
+ * two or more renders in parentheses, so nesting keeps its precedence.
+ *
+ * Preconditions: parts are SQL predicates written in code.
+ *
+ * Thread-safety: immutable.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     (string) CompositeExpression::and('a = 1', CompositeExpression::or('b = 2', 'c = 3'));
+ *     // (a = 1 AND (b = 2 OR c = 3))
+ *
+ * References: ADR-009; SPEC-001 §5.
+ *
+ * @see https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-PRECEDENCE
+ */
 final class CompositeExpression implements \Stringable
 {
     /** @param array<int, string|self> $parts */

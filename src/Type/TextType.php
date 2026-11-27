@@ -7,6 +7,23 @@ namespace KaririCode\Database\Type;
 use KaririCode\Database\Contract\Platform;
 use KaririCode\Database\Contract\TypeConverter;
 
+/**
+ * Stores long text: LONGTEXT on MySQL and MariaDB, TEXT elsewhere.
+ *
+ * Preconditions: the value is a string or a scalar that converts to one.
+ *
+ * Thread-safety: stateless.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     (new TextType())->getSqlDeclaration([], $mysqlPlatform);   // LONGTEXT
+ *
+ * References: ADR-007; SPEC-001 §2.4.
+ *
+ * @see https://dev.mysql.com/doc/refman/8.4/en/blob.html
+ */
 final readonly class TextType implements TypeConverter
 {
     #[\Override]

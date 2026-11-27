@@ -7,17 +7,36 @@ namespace KaririCode\Database\Contract;
 use KaririCode\Database\Cache\CacheProfile;
 use KaririCode\Database\Enum\TransactionIsolationLevel;
 
-// ── Connection ───────────────────────────────────────────────────────
-//
-// Primary consumer-facing contract for database operations.
-// Consumers (ORM, DataFlow, Tenancy) program against this interface.
-// The DefaultConnection implementation wraps a DriverConnection
-// with transaction nesting, type conversion, and advisory locks.
-//
-// Phase 1: local in kariricode/database
-// Phase 2: promoted to KaririCode\Contract\Database\Connection
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * The connection the ORM, DataFlow and Tenancy program against: queries
+ * and statements with bound parameters, nested transactions through
+ * savepoints, session isolation, advisory locks, result caching, a query
+ * builder and convenience DML.
+ *
+ * Preconditions: SQL text and identifiers come from code. Values are
+ * bound, but the table and column names given to insert(), update() and
+ * delete() are written into the SQL unquoted. executeStatement() is for
+ * statements without a result set: without parameters it runs through
+ * exec(), and a SELECT there leaves its result pending on MySQL.
+ *
+ * Thread-safety: an implementation holds one session and is not safe to
+ * share between concurrent requests.
+ *
+ * Side effects: every method except transactionNestingLevel(),
+ * transactionIsolation() and createQueryBuilder() talks to the server.
+ *
+ * Example:
+ *
+ *     $connection->transactional(static function (Connection $c): void {
+ *         $c->insert('orders', ['customer_id' => 7, 'total' => '99.90']);
+ *         $c->update('stock', ['reserved' => 1], ['sku' => 'A-1']);
+ *     });
+ *
+ * References: ADR-001 (two layers); ADR-005 (savepoints); ADR-010 (result
+ * cache); SPEC-001 §2.1 and §4.
+ *
+ * @see https://www.php.net/manual/en/book.pdo.php
+ */
 interface Connection
 {
     // ── Query Execution ──────────────────────────────────────────────────

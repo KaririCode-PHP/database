@@ -6,24 +6,27 @@ namespace KaririCode\Database\Exception;
 
 use KaririCode\Contract\Exception\NotFound;
 
-// ── SchemaException ──────────────────────────────────────────────────
-
 /**
- * A schema object the caller asked for does not exist.
+ * A schema object the caller asked for does not exist: a table or a
+ * column.
  *
- * Preconditions: none; instances come only from the named factories
- *   below (the constructor is private).
- * Side effects: none.
+ * Preconditions: none; instances come only from the named factories (the
+ * constructor is private).
+ *
  * Thread-safety: immutable after construction.
  *
- * Family: Contract\Exception\NotFound (Spec V4.3.3 §8.4). Messages carry
- * the [DB_nnnn] code and never echo SQL, driver text, DSNs or values
- * (E-047); the driver error stays on getPrevious().
+ * Side effects: none.
+ *
+ * Family: Contract\Exception\NotFound. Messages carry the [DB_nnnn] code
+ * and never echo the requested name (E-047).
  *
  * Example:
- *   throw SchemaException::tableNotFound();
  *
- * @see https://www.rfc-editor.org/rfc/rfc9110 (status mapping at the edge)
+ *     throw SchemaException::tableNotFound();
+ *
+ * References: Spec V4.3.3 §8.4; ADR-008; SPEC-001 §12 (codes 6100, 6101).
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc9110
  * @since 4.3.0
  */
 final class SchemaException extends \RuntimeException implements DatabaseException, NotFound

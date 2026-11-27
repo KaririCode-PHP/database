@@ -7,12 +7,27 @@ namespace KaririCode\Database\Cache;
 use KaririCode\Database\Contract\Result;
 use KaririCode\Database\Type\ScalarValue;
 
-// ── CachedResult ─────────────────────────────────────────────────────
-//
-// Wraps materialized result array from cache. All fetch/iterate
-// methods operate on the in-memory array.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * A Result over rows already in memory: what executeCacheQuery() returns,
+ * both after a cache hit and after the query that filled the cache.
+ *
+ * Preconditions: the rows are a list of associative rows; numeric shapes
+ * are their values in column order.
+ *
+ * Thread-safety: holds a read position; not safe to share.
+ *
+ * Side effects: none; fetching only moves the position. rowCount() is the
+ * number of rows held.
+ *
+ * Example:
+ *
+ *     $result = new CachedResult([['id' => 1, 'name' => 'a']]);
+ *     $result->fetchAllKeyValue();   // [1 => 'a']
+ *
+ * References: ADR-010; SPEC-001 §4.1.
+ *
+ * @see https://www.php-fig.org/psr/psr-16/
+ */
 final class CachedResult implements Result
 {
     private int $position = 0;

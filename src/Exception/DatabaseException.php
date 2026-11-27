@@ -6,8 +6,6 @@ namespace KaririCode\Database\Exception;
 
 use KaririCode\Contract\Exception\ExceptionInterface;
 
-// ── DatabaseException ────────────────────────────────────────────────
-
 /**
  * Marker for every exception thrown by kariricode/database, so callers can
  * catch the whole package. Each concrete exception also implements exactly
@@ -16,14 +14,22 @@ use KaririCode\Contract\Exception\ExceptionInterface;
  * Runtime 503/500).
  *
  * Preconditions: none.
- * Side effects: none.
+ *
  * Thread-safety: not applicable (interface).
  *
- * Error-code range: 6000–6199 (ecosystem registry; Database SPEC §11).
+ * Side effects: none.
+ *
+ * Error-code range: 6000–6199 (ecosystem registry).
  *
  * Example:
- *   try { $connection->executeStatement($sql, $params); }
- *   catch (DatabaseException $e) { $logger->error($e->getMessage(), ['exception' => $e]); }
+ *
+ *     try {
+ *         $connection->executeStatement($sql, $params);
+ *     } catch (DatabaseException $e) {
+ *         $logger->error($e->getMessage(), ['exception' => $e]);
+ *     }
+ *
+ * References: Spec V4.3.3 §8.4 (families); ADR-004; SPEC-001 §12 (codes).
  *
  * @see https://www.rfc-editor.org/rfc/rfc9110
  * @since 4.3.0 (was an abstract class extending \RuntimeException)

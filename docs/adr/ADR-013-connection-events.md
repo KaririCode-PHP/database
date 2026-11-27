@@ -24,3 +24,9 @@ All events implement `DataStoreEvent` marker interface (shared with `kariricode/
 
 **Positive:** Unified observability with NoSQL. `kariricode/observability` receives events from both SQL and NoSQL.
 **Negative:** +6 small VO files.
+
+## Amendment — 2026-11-27: PSR-14, and ConnectionEstablished is emitted
+
+4.3.0 replaced the duck-typed bridge with a PSR-14 `EventDispatcherInterface` (ADR-015), and the six events stayed. `ConnectionEstablished` was never dispatched, although SPEC-001 §2.3 names `ConnectionFactory` as its source. From 4.4.0 `ConnectionFactory::createConnection(ConnectionParams $params, string $name = 'default')` dispatches it after the connect, with the name `ConnectionRegistry` passes, and dispatches `ConnectionError` when the connect fails, before rethrowing.
+
+Listeners of `QueryExecuted` and `ConnectionError` receive the bound values; they must redact them before logging.

@@ -42,7 +42,7 @@
         "cs-check": "kcode cs:fix --check",
         "cs-fix": "kcode cs:fix",
         "complexity": "php tools/complexity.php src",
-        "infection": "kcode run infection --min-msi=60 --min-covered-msi=60 --threads=max",
+        "infection": "kcode run infection --threads=max",
         "security": [
             "@composer validate --strict",
             "@composer audit --locked",

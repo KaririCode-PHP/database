@@ -6,24 +6,27 @@ namespace KaririCode\Database\Exception;
 
 use KaririCode\Contract\Exception\Configuration;
 
-// ── PlatformException ────────────────────────────────────────────────
-
 /**
- * The selected platform (vendor and version) lacks a feature the call needs.
+ * The selected platform (vendor and version) lacks a feature the call
+ * needs: savepoints, schemas, advisory locks, an isolation level.
  *
- * Preconditions: none; instances come only from the named factories
- *   below (the constructor is private).
- * Side effects: none.
+ * Preconditions: none; instances come only from the named factories (the
+ * constructor is private).
+ *
  * Thread-safety: immutable after construction.
  *
- * Family: Contract\Exception\Configuration (Spec V4.3.3 §8.4). Messages carry
- * the [DB_nnnn] code and never echo SQL, driver text, DSNs or values
- * (E-047); the driver error stays on getPrevious().
+ * Side effects: none.
+ *
+ * Family: Contract\Exception\Configuration. Messages carry the [DB_nnnn]
+ * code and name only the feature (E-047).
  *
  * Example:
- *   throw PlatformException::savepointsNotSupported();
  *
- * @see https://www.rfc-editor.org/rfc/rfc9110 (status mapping at the edge)
+ *     throw PlatformException::savepointsNotSupported();
+ *
+ * References: Spec V4.3.3 §8.4; ADR-003; SPEC-001 §12 (codes 6080–6084).
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc9110
  * @since 4.3.0
  */
 final class PlatformException extends \RuntimeException implements DatabaseException, Configuration

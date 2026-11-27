@@ -6,13 +6,33 @@ namespace KaririCode\Database\Contract;
 
 use KaririCode\Database\Enum\UnionType;
 
-// ── QueryBuilder ─────────────────────────────────────────────────────
-//
-// Entity-agnostic fluent SQL builder. Matches Doctrine DBAL 4.4
-// feature set: SELECT/INSERT/UPDATE/DELETE, UNION, CTE (WITH),
-// DISTINCT, all JOIN types, named/positional parameters.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Composes SELECT, INSERT, UPDATE and DELETE statements clause by clause
+ * (joins, grouping, unions, CTEs, pagination, bulk inserts) and runs them
+ * on the connection that created it, with values as bound parameters.
+ *
+ * Preconditions: predicates, columns and table names are SQL written in
+ * code, not request input; values go through setParameter(),
+ * createNamedParameter() or values(). A builder serves one statement.
+ *
+ * Thread-safety: mutable; one per statement.
+ *
+ * Side effects: executeQuery() and executeStatement() run SQL; the other
+ * methods change the builder.
+ *
+ * Example:
+ *
+ *     $qb = $connection->createQueryBuilder();
+ *     $rows = $qb->select('id', 'name')->from('users')
+ *         ->where('status = ' . $qb->createNamedParameter('active'))
+ *         ->setMaxResults(20)
+ *         ->executeQuery()->fetchAllAssociative();
+ *
+ * References: ADR-009 (builder in the DBAL); ADR-012 (bulk insert);
+ * SPEC-001 §5.
+ *
+ * @see https://www.php.net/manual/en/pdo.prepared-statements.php
+ */
 interface QueryBuilder
 {
     // ── SELECT ───────────────────────────────────────────────────────────

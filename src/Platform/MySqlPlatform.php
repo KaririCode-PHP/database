@@ -8,16 +8,35 @@ use KaririCode\Database\Contract\Platform;
 use KaririCode\Database\Enum\TransactionIsolationLevel;
 use KaririCode\Database\ValueObject\PlatformVersion;
 
-// ── MySqlPlatform ────────────────────────────────────────────────────
-//
-// MySQL/MariaDB dialect. Version-aware — no subclass per version.
-// Ref: Doctrine DBAL 4.4 has MySQLPlatform + MySQL80Platform +
-// MySQL84Platform + MariaDBPlatform + 4 more. We use one class
-// with conditional checks on PlatformVersion.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * The MySQL and MariaDB dialect: backtick quoting, ON DUPLICATE KEY UPDATE
+ * upserts, GET_LOCK advisory locks, session isolation and USE for the
+ * tenant switch, with features chosen by version: RETURNING from MariaDB
+ * 10.5, CTEs and JSON from MySQL 8.0 and MariaDB 10.2.
+ *
+ * Preconditions: advisory-lock keys are integers used as lock names for
+ * the whole server, across databases, so applications sharing a server
+ * need separate key ranges. The locks belong to the session: release them
+ * with releaseAdvisoryLock(), or they last until the session ends.
+ *
+ * Thread-safety: immutable.
+ *
+ * Side effects: none; methods return SQL text.
+ *
+ * Example:
+ *
+ *     $platform = new MySqlPlatform(new PlatformVersion('mariadb', 10, 11));
+ *     $platform->getUpsertSql('stock', ['sku', 'qty'], ['sku']);
+ *     // INSERT INTO `stock` (`sku`, `qty`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `qty` = VALUES(`qty`)
+ *
+ * References: ADR-003 (version-aware platforms); SPEC-001 §6.
+ *
+ * @see https://dev.mysql.com/doc/refman/8.4/en/locking-functions.html
+ */
 final class MySqlPlatform implements Platform
 {
+    private const int BLOCKING_LOCK_TIMEOUT_SECONDS = 31_536_000;
+
     public function __construct(
         public readonly PlatformVersion $version,
     ) {}
@@ -69,6 +88,12 @@ final class MySqlPlatform implements Platform
             array_diff($columns, $conflictColumns),
         );
 
+        // Sem colunas fora da chave, "col = col" e a atualizacao nula: a linha existente fica.
+        if ($updates === []) {
+            $first = $this->quoteIdentifier((string) reset($conflictColumns));
+            $updates = ["{$first} = {$first}"];
+        }
+
         return sprintf(
             'INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s',
             $this->quoteIdentifier($table),
@@ -99,7 +124,9 @@ final class MySqlPlatform implements Platform
     #[\Override]
     public function setTransactionIsolationSql(TransactionIsolationLevel $level): string
     {
-        return 'SET TRANSACTION ISOLATION LEVEL ' . $level->toSql();
+        // SESSION: sem ele o nivel vale so para a proxima transacao, e
+        // transactionIsolation() passaria a mentir depois dela.
+        return 'SET SESSION TRANSACTION ISOLATION LEVEL ' . $level->toSql();
     }
 
     #[\Override]
@@ -111,7 +138,9 @@ final class MySqlPlatform implements Platform
     #[\Override]
     public function getAdvisoryLockSql(int $key): string
     {
-        return "SELECT GET_LOCK('{$key}', -1)";
+        // MariaDB devolve NULL para timeout negativo (o MySQL le como infinito):
+        // um ano funciona nos dois.
+        return "SELECT GET_LOCK('{$key}', " . self::BLOCKING_LOCK_TIMEOUT_SECONDS . ')';
     }
 
     #[\Override]

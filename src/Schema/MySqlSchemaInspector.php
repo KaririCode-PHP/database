@@ -15,6 +15,28 @@ use KaririCode\Database\ValueObject\ForeignKeyMetadata;
 use KaririCode\Database\ValueObject\IndexMetadata;
 use KaririCode\Database\ValueObject\ResultRow;
 
+/**
+ * Reads tables, columns, indexes and foreign keys of a MySQL or MariaDB
+ * database from information_schema. MariaDB 10.2.7+ quotes literal
+ * defaults and reports a missing default as NULL text; both come back as
+ * MySQL reports them, so a default reads the same on either server.
+ *
+ * Preconditions: $schema is a database name and defaults to DATABASE();
+ * the user needs to see the tables in information_schema.
+ *
+ * Thread-safety: holds a connection; not safe to share.
+ *
+ * Side effects: runs catalog queries.
+ *
+ * Example:
+ *
+ *     $inspector = new MySqlSchemaInspector($connection);
+ *     $columns = $inspector->listTableColumns('orders');
+ *
+ * References: ADR-008 (read-only inspector); SPEC-001 §2.1.
+ *
+ * @see https://dev.mysql.com/doc/refman/8.4/en/information-schema-columns-table.html
+ */
 final class MySqlSchemaInspector implements SchemaInspector
 {
     public function __construct(
@@ -53,7 +75,7 @@ final class MySqlSchemaInspector implements SchemaInspector
                 type: $row->string('DATA_TYPE'),
                 length: $row->nullableInt('CHARACTER_MAXIMUM_LENGTH'),
                 nullable: $row->string('IS_NULLABLE') === 'YES',
-                default: $row->nullableString('COLUMN_DEFAULT'),
+                default: $this->columnDefault($row->nullableString('COLUMN_DEFAULT')),
                 autoIncrement: str_contains($row->string('EXTRA'), 'auto_increment'),
                 comment: self::nonEmpty($row->nullableString('COLUMN_COMMENT')),
             );
@@ -157,5 +179,29 @@ final class MySqlSchemaInspector implements SchemaInspector
     private static function databaseName(mixed $name): string
     {
         return $name === false || $name === null ? throw QueryException::introspectionFailed() : ScalarValue::asString($name, 'string');
+    }
+
+    /**
+     * MariaDB 10.2.7+ quotes literal defaults and reports a nullable column
+     * without default as the string NULL, to tell them from expressions;
+     * MySQL reports both bare. Both come back here as MySQL reports them.
+     */
+    private function columnDefault(?string $default): ?string
+    {
+        if ($default === null || !$this->quotesDefaults()) {
+            return $default;
+        }
+
+        if ($default === 'NULL') {
+            return null;
+        }
+
+        return preg_match("/\\A'(.*)'\\z/s", $default, $literal) === 1 ? str_replace("''", "'", $literal[1]) : $default;
+    }
+
+    /** Todas as versoes suportadas do MariaDB (10.4+) citam os defaults; o MySQL nunca. */
+    private function quotesDefaults(): bool
+    {
+        return $this->connection->platform->version->isMariaDb();
     }
 }

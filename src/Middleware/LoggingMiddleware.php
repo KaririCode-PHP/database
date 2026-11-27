@@ -12,12 +12,26 @@ use KaririCode\Database\Contract\Statement;
 use KaririCode\Database\ValueObject\ConnectionParams;
 use Psr\Log\LoggerInterface;
 
-// ── LoggingMiddleware ────────────────────────────────────────────────
-//
-// Logs all SQL queries with parameters and execution time.
-// Duck-typed callable — zero hard dependency on kariricode/logging.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Logs the connect (driver, host, port, database, duration) at info level
+ * and every statement (SQL, parameter count, duration) at debug level
+ * through a PSR-3 logger.
+ *
+ * Preconditions: the SQL is logged as written, so it must not embed
+ * secrets; parameter values are never logged, only how many there were.
+ *
+ * Thread-safety: stateless; safe to share.
+ *
+ * Side effects: writes log records.
+ *
+ * Example:
+ *
+ *     $factory = new ConnectionFactory([new LoggingMiddleware($logger)]);
+ *
+ * References: ADR-002 (middleware order: outermost); SPEC-001 §2.1.
+ *
+ * @see https://www.php-fig.org/psr/psr-3/
+ */
 final class LoggingMiddleware implements Middleware
 {
     public function __construct(

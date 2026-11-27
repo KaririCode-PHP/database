@@ -9,6 +9,30 @@ use KaririCode\Database\Exception\ConnectionException;
 use KaririCode\Database\Exception\DatabaseException;
 use KaririCode\Database\Exception\QueryException;
 
+/**
+ * MySQL and MariaDB error conversion. Both servers report integrity
+ * violations under SQLSTATE 23000 and most connect errors under HY000, so
+ * the vendor code in errorInfo[1] decides: 1045 and 1044 are credentials,
+ * 1049 an unknown database, 1062 a duplicate key, 1213 a deadlock, 2002 a
+ * refused connection.
+ *
+ * Preconditions: the PDOException carries errorInfo, which pdo_mysql
+ * fills for connect and statement errors alike; without it the SQLSTATE
+ * class decides.
+ *
+ * Thread-safety: stateless.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     $converter = new MySqlExceptionConverter();
+ *     $converter->convert($pdoException);   // errorInfo[1] 1062 => QueryException 6032
+ *
+ * References: ADR-004; SPEC-001 §3.1.
+ *
+ * @see https://dev.mysql.com/doc/mysql-errors/8.4/en/server-error-reference.html
+ */
 final class MySqlExceptionConverter extends AbstractExceptionConverter
 {
     #[\Override]
@@ -29,6 +53,8 @@ final class MySqlExceptionConverter extends AbstractExceptionConverter
     private function factories(): array
     {
         return [
+            1040 => ConnectionException::tooManyConnections(...),
+            1044 => ConfigurationException::authenticationFailed(...),
             1045 => ConfigurationException::authenticationFailed(...),
             1049 => ConfigurationException::databaseNotFound(...),
             1048 => QueryException::notNullViolation(...),
@@ -39,6 +65,7 @@ final class MySqlExceptionConverter extends AbstractExceptionConverter
             1452 => QueryException::foreignKeyViolation(...),
             2002 => ConnectionException::connectionFailed(...),
             2006 => ConnectionException::connectionLost(...),
+            2013 => ConnectionException::connectionLost(...),
         ];
     }
 }

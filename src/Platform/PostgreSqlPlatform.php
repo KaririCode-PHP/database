@@ -8,6 +8,29 @@ use KaririCode\Database\Contract\Platform;
 use KaririCode\Database\Enum\TransactionIsolationLevel;
 use KaririCode\Database\ValueObject\PlatformVersion;
 
+/**
+ * The PostgreSQL dialect: double-quote quoting, ON CONFLICT upserts,
+ * transaction-scoped advisory locks, session isolation through
+ * default_transaction_isolation and SET search_path for schemas; supports
+ * RETURNING, CTEs and, from 9.4, JSON operations.
+ *
+ * Preconditions: advisory locks are pg_advisory_xact_lock(): take them
+ * inside a transaction; they are released at commit or rollback, so
+ * releaseAdvisoryLock() has nothing to do.
+ *
+ * Thread-safety: immutable.
+ *
+ * Side effects: none; methods return SQL text.
+ *
+ * Example:
+ *
+ *     $platform = new PostgreSqlPlatform(new PlatformVersion('postgresql', 16));
+ *     $platform->getSetSchemaPathSql('tenant_42');   // SET search_path TO "tenant_42", public
+ *
+ * References: ADR-003; SPEC-001 §6.
+ *
+ * @see https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS
+ */
 final class PostgreSqlPlatform implements Platform
 {
     public function __construct(
@@ -58,13 +81,16 @@ final class PostgreSqlPlatform implements Platform
             array_diff($columns, $conflictColumns),
         );
 
+        // Sem colunas fora da chave nao ha o que atualizar: a linha existente fica.
+        $action = $updates === [] ? 'DO NOTHING' : 'DO UPDATE SET ' . implode(', ', $updates);
+
         return sprintf(
-            'INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET %s',
+            'INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) %s',
             $this->quoteIdentifier($table),
             implode(', ', $quoted),
             implode(', ', $placeholders),
             implode(', ', $conflict),
-            implode(', ', $updates),
+            $action,
         );
     }
 

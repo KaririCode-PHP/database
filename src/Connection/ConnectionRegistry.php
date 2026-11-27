@@ -9,12 +9,34 @@ use KaririCode\Database\DsnParser;
 use KaririCode\Database\Exception\ConfigurationException;
 use KaririCode\Database\ValueObject\ConnectionParams;
 
-// ── ConnectionRegistry ───────────────────────────────────────────────
-//
-// Named connection registry with lazy initialization.
-// Supports both ConnectionParams and DSN string configuration.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Named connections built on first use from ConnectionParams or DSN
+ * strings, so an application configures every database in one place and
+ * opens only those a request touches.
+ *
+ * Preconditions: names are configured up front; an unknown name is
+ * ConfigurationException 6018, a wiring error rather than a missing
+ * record.
+ *
+ * Thread-safety: caches the connections it opened; one registry per
+ * request or worker.
+ *
+ * Side effects: get() opens the connection on first use; healthCheck()
+ * opens every configured connection and pings it; disconnect() drops the
+ * cached connection.
+ *
+ * Example:
+ *
+ *     $registry = new ConnectionRegistry([
+ *         'default' => (string) getenv('DATABASE_URL'),
+ *         'reporting' => new ConnectionParams(driver: 'pdo_pgsql', host: 'replica', database: 'shop'),
+ *     ]);
+ *     $rows = $registry->get('reporting')->executeQuery('SELECT 1')->fetchAllNumeric();
+ *
+ * References: ADR-011 (DSN); SPEC-001 §4.4 (health check).
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc3986
+ */
 final class ConnectionRegistry
 {
     /** @var array<string, Connection> */
@@ -44,7 +66,7 @@ final class ConnectionRegistry
             $config = (new DsnParser())->parse($config);
         }
 
-        $this->connections[$name] = $this->factory->createConnection($config);
+        $this->connections[$name] = $this->factory->createConnection($config, $name);
 
         return $this->connections[$name];
     }

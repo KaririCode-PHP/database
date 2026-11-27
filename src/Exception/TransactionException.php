@@ -6,24 +6,29 @@ namespace KaririCode\Database\Exception;
 
 use KaririCode\Contract\Exception\Runtime;
 
-// ── TransactionException ─────────────────────────────────────────────
-
 /**
- * A transaction, savepoint or advisory-lock operation could not complete.
+ * A transaction, savepoint or advisory-lock operation could not complete:
+ * no active transaction, a failed savepoint or commit, a lock held by
+ * another session.
  *
- * Preconditions: none; instances come only from the named factories
- *   below (the constructor is private).
- * Side effects: none.
+ * Preconditions: none; instances come only from the named factories (the
+ * constructor is private).
+ *
  * Thread-safety: immutable after construction.
  *
- * Family: Contract\Exception\Runtime (Spec V4.3.3 §8.4). Messages carry
- * the [DB_nnnn] code and never echo SQL, driver text, DSNs or values
- * (E-047); the driver error stays on getPrevious().
+ * Side effects: none.
+ *
+ * Family: Contract\Exception\Runtime. Messages carry the [DB_nnnn] code
+ * and never echo SQL or driver text (E-047); the driver error stays on
+ * getPrevious().
  *
  * Example:
- *   throw TransactionException::noActiveTransaction();
  *
- * @see https://www.rfc-editor.org/rfc/rfc9110 (status mapping at the edge)
+ *     throw TransactionException::noActiveTransaction();
+ *
+ * References: Spec V4.3.3 §8.4; ADR-005; SPEC-001 §12 (codes 6060–6063).
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc9110
  * @since 4.3.0
  */
 final class TransactionException extends \RuntimeException implements DatabaseException, Runtime

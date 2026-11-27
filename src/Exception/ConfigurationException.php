@@ -6,24 +6,30 @@ namespace KaririCode\Database\Exception;
 
 use KaririCode\Contract\Exception\Configuration;
 
-// ── ConfigurationException ───────────────────────────────────────────
-
 /**
- * The connection or type configuration is wrong; retrying does not help.
+ * The connection or type configuration is wrong: credentials the server
+ * rejects, a database it does not have, an unparsable DSN, an unknown
+ * driver, scheme, charset or type name. Retrying does not help.
  *
- * Preconditions: none; instances come only from the named factories
- *   below (the constructor is private).
- * Side effects: none.
+ * Preconditions: none; instances come only from the named factories (the
+ * constructor is private).
+ *
  * Thread-safety: immutable after construction.
  *
- * Family: Contract\Exception\Configuration (Spec V4.3.3 §8.4). Messages carry
- * the [DB_nnnn] code and never echo SQL, driver text, DSNs or values
- * (E-047); the driver error stays on getPrevious().
+ * Side effects: none.
+ *
+ * Family: Contract\Exception\Configuration. Messages carry the [DB_nnnn]
+ * code and never echo SQL, driver text, DSNs or values (E-047); the driver
+ * error stays on getPrevious().
  *
  * Example:
- *   throw ConfigurationException::invalidDsn();
  *
- * @see https://www.rfc-editor.org/rfc/rfc9110 (status mapping at the edge)
+ *     throw ConfigurationException::invalidDsn();
+ *
+ * References: Spec V4.3.3 §8.4; ADR-004; SPEC-001 §12 (codes 6012–6020,
+ * 6121).
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc9110
  * @since 4.3.0
  */
 final class ConfigurationException extends \RuntimeException implements DatabaseException, Configuration
@@ -62,6 +68,11 @@ final class ConfigurationException extends \RuntimeException implements Database
     public static function invalidCharset(): self
     {
         return new self(message: '[DB_6019] Invalid charset: only letters, digits, hyphen and underscore are allowed.', code: 6019, previous: null);
+    }
+
+    public static function unknownDriver(): self
+    {
+        return new self(message: '[DB_6020] Unknown driver: the supported drivers are pdo_mysql, pdo_pgsql and pdo_sqlite.', code: 6020, previous: null);
     }
 
     public static function unknownType(): self

@@ -10,17 +10,36 @@ use KaririCode\Database\Contract\Result;
 use KaririCode\Database\Enum\UnionType;
 use KaririCode\Database\Exception\QueryException;
 
-// ── SqlQueryBuilder ──────────────────────────────────────────────────
-//
-// Entity-agnostic fluent SQL builder. Manipulates SQL strings and
-// parameter bindings only — zero entity awareness.
-//
-// ORM extends this with entity-aware features (hydration, relations).
-// DataFlow uses it directly for ETL query construction.
-//
-// Ref: Doctrine DBAL 4.4 QueryBuilder lives in DBAL, not ORM.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * The QueryBuilder of DefaultConnection: writes the SQL of each statement
+ * kind, keeps the parameters and runs the statement on its connection.
+ * Named parameters are :dcValue1, :dcValue2...; values() binds the INSERT
+ * values to its "?" placeholders; a bulk insert takes the union of the
+ * columns of every row (a missing column is NULL) and splits the rows so
+ * no statement passes the platform's placeholder limit.
+ *
+ * Preconditions: those of QueryBuilder. Table and column names are written
+ * unquoted, except in a bulk insert, which quotes them through the
+ * platform. values() replaces the parameters set before it.
+ *
+ * Thread-safety: mutable; one builder per statement.
+ *
+ * Side effects: executeQuery() and executeStatement() run SQL; a bulk
+ * insert runs one statement per chunk and returns the sum of their row
+ * counts.
+ *
+ * Example:
+ *
+ *     $inserted = $connection->createQueryBuilder()
+ *         ->insert('readings')
+ *         ->bulkValues([['sensor' => 1, 'value' => 20.5], ['sensor' => 2, 'value' => 19.0, 'flag' => 'late']])
+ *         ->executeStatement();   // 2; the first row gets flag NULL
+ *
+ * References: ADR-009 (builder in the DBAL); ADR-012 (bulk insert,
+ * GAP-DB-05); SPEC-001 §5.
+ *
+ * @see https://www.sqlite.org/limits.html#max_variable_number
+ */
 final class SqlQueryBuilder implements QueryBuilder
 {
     private string $type = 'SELECT';
@@ -122,6 +141,11 @@ final class SqlQueryBuilder implements QueryBuilder
     public function values(array $values): static
     {
         $this->insertValues = $values;
+        // Os valores sao os parametros posicionais dos "?" que buildInsert() gera;
+        // antes eles eram descartados e o INSERT gravava NULL.
+        $this->parameters = array_values($values);
+        $this->parameterTypes = [];
+        $this->boundCounter = count($values);
 
         return $this;
     }
@@ -479,10 +503,7 @@ final class SqlQueryBuilder implements QueryBuilder
     private function buildInsert(): string
     {
         if (!empty($this->bulkRows)) {
-            $columns = array_keys($this->bulkRows[0]);
-            $platform = $this->connection->platform;
-
-            return $platform->getBulkInsertSql(table: $this->table, columns: $columns, rowCount: count($this->bulkRows));
+            return $this->connection->platform->getBulkInsertSql(table: $this->table, columns: $this->bulkColumns(), rowCount: count($this->bulkRows));
         }
 
         $columns = array_keys($this->insertValues);
@@ -599,7 +620,7 @@ final class SqlQueryBuilder implements QueryBuilder
     private function executeBulkInsert(): int
     {
         $platform = $this->connection->platform;
-        $columns = array_keys($this->bulkRows[0]);
+        $columns = $this->bulkColumns();
         $colCount = count($columns);
         $maxPlaceholders = $platform->maxPlaceholders();
         $maxRowsPerChunk = max((int) floor($maxPlaceholders / max($colCount, 1)), 1);
@@ -618,5 +639,23 @@ final class SqlQueryBuilder implements QueryBuilder
         }
 
         return $totalAffected;
+    }
+
+    /**
+     * Uniao das chaves de todas as linhas, na ordem em que aparecem: so as da
+     * primeira linha descartavam em silencio o que so as seguintes traziam.
+     *
+     * @return list<string>
+     */
+    private function bulkColumns(): array
+    {
+        $columns = [];
+        foreach ($this->bulkRows as $row) {
+            foreach (array_keys($row) as $column) {
+                $columns[$column] = true;
+            }
+        }
+
+        return array_map(strval(...), array_keys($columns));
     }
 }

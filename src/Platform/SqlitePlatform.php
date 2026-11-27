@@ -9,6 +9,30 @@ use KaririCode\Database\Enum\TransactionIsolationLevel;
 use KaririCode\Database\Exception\PlatformException;
 use KaririCode\Database\ValueObject\PlatformVersion;
 
+/**
+ * The SQLite dialect: double-quote quoting and ON CONFLICT upserts, with
+ * limits read from the library version: 999 bound parameters before 3.32
+ * and 32766 after, savepoints from 3.6, RETURNING from 3.35, JSON from
+ * 3.38. SQLite has no schemas and no advisory locks.
+ *
+ * Preconditions: only ReadUncommitted and Serializable map to SQLite
+ * (PRAGMA read_uncommitted); the other levels, schemas and advisory locks
+ * raise PlatformException (6080, 6082, 6083).
+ *
+ * Thread-safety: immutable.
+ *
+ * Side effects: none; methods return SQL text.
+ *
+ * Example:
+ *
+ *     $platform = new SqlitePlatform(new PlatformVersion('sqlite', 3, 45));
+ *     $platform->maxPlaceholders();   // 32766
+ *
+ * References: ADR-003; ADR-012 (placeholder limit for bulk inserts);
+ * SPEC-001 §6.
+ *
+ * @see https://www.sqlite.org/limits.html#max_variable_number
+ */
 final class SqlitePlatform implements Platform
 {
     public function __construct(
@@ -59,13 +83,16 @@ final class SqlitePlatform implements Platform
             array_diff($columns, $conflictColumns),
         );
 
+        // Sem colunas fora da chave nao ha o que atualizar: a linha existente fica.
+        $action = $updates === [] ? 'DO NOTHING' : 'DO UPDATE SET ' . implode(', ', $updates);
+
         return sprintf(
-            'INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET %s',
+            'INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) %s',
             $this->quoteIdentifier($table),
             implode(', ', $quoted),
             implode(', ', $placeholders),
             implode(', ', $conflict),
-            implode(', ', $updates),
+            $action,
         );
     }
 

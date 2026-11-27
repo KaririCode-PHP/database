@@ -4,12 +4,30 @@ declare(strict_types=1);
 
 namespace KaririCode\Database\Query;
 
-// ── ExpressionBuilder ────────────────────────────────────────────────
-//
-// Builds comparison and composite expressions for WHERE/HAVING.
-// Ref: Doctrine DBAL 4.4 ExpressionBuilder.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Writes predicate SQL for QueryBuilder clauses (eq, lt, like, in,
+ * between, IS NULL) and groups them with AND and OR.
+ *
+ * Preconditions: columns and values are SQL fragments, normally a column
+ * name and a placeholder from createNamedParameter(); nothing is escaped
+ * or bound here.
+ *
+ * Thread-safety: stateless.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     $expr = new ExpressionBuilder();
+ *     $qb->where((string) $expr->and(
+ *         $expr->eq('status', $qb->createNamedParameter('active')),
+ *         $expr->gte('age', $qb->createNamedParameter(18, ParameterType::INTEGER->value)),
+ *     ));
+ *
+ * References: ADR-009; SPEC-001 §5.
+ *
+ * @see https://www.php.net/manual/en/pdo.prepared-statements.php
+ */
 final class ExpressionBuilder
 {
     public function and(string ...$parts): CompositeExpression

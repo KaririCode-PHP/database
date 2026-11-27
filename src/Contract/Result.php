@@ -4,16 +4,29 @@ declare(strict_types=1);
 
 namespace KaririCode\Database\Contract;
 
-// ── Result ───────────────────────────────────────────────────────────
-//
-// Abstraction over database result sets. Supports eager
-// materialization (fetchAll*) and generator-backed iteration
-// (iterate*) for O(1) memory ETL pipelines.
-//
-// fetchAllKeyValue / fetchAllAssociativeIndexed match
-// Doctrine DBAL 4.4 Connection convenience methods.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * The rows a query returned, read eagerly as lists or lazily through
+ * generators, in associative, numeric, first-column, key-value or indexed
+ * shape.
+ *
+ * Preconditions: one cursor per result, so mixing fetch*() and iterate*()
+ * continues from the current row; key-value and indexed shapes need a
+ * first column that can be an array key.
+ *
+ * Thread-safety: not safe to share.
+ *
+ * Side effects: fetching advances the cursor; free() releases it.
+ *
+ * Example:
+ *
+ *     foreach ($connection->executeQuery('SELECT * FROM audit_log')->iterateAssociative() as $row) {
+ *         $export->write($row);
+ *     }
+ *
+ * References: SPEC-001 §2.1 (ISSUE-002, lazy iteration).
+ *
+ * @see https://www.php.net/manual/en/language.generators.overview.php
+ */
 interface Result
 {
     // ── Eager Fetch ──────────────────────────────────────────────────────

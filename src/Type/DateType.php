@@ -8,6 +8,24 @@ use KaririCode\Database\Contract\Platform;
 use KaririCode\Database\Contract\TypeConverter;
 use KaririCode\Database\Exception\TypeConversionException;
 
+/**
+ * Stores a calendar date as 'Y-m-d': DATE on the servers, text on SQLite.
+ * It is read back at midnight in PHP's default time zone.
+ *
+ * Preconditions: the value is a \DateTimeInterface; its time is ignored.
+ *
+ * Thread-safety: stateless.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     (new DateType())->convertToPhpValue('2026-11-27', $platform)?->format('Y-m-d');   // '2026-11-27'
+ *
+ * References: ADR-007; SPEC-001 §2.4.
+ *
+ * @see https://www.php.net/manual/en/datetimeimmutable.createfromformat.php
+ */
 final readonly class DateType implements TypeConverter
 {
     private const FORMAT = 'Y-m-d';

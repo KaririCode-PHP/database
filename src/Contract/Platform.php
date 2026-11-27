@@ -7,13 +7,29 @@ namespace KaririCode\Database\Contract;
 use KaririCode\Database\Enum\TransactionIsolationLevel;
 use KaririCode\Database\ValueObject\PlatformVersion;
 
-// ── Platform ─────────────────────────────────────────────────────────
-//
-// SQL dialect abstraction. Each supported database has one
-// implementation. Version-aware via PlatformVersion — no inheritance
-// chain (anti-Doctrine: no 2K-line AbstractPlatform).
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * The SQL dialect of one vendor and version: identifier quoting, upsert
+ * and bulk-insert SQL, isolation and advisory-lock statements, literals,
+ * and what the server supports (savepoints, schemas, RETURNING, CTEs,
+ * JSON), so no other class writes vendor SQL.
+ *
+ * Preconditions: names given to the SQL builders are table and column
+ * names from code, escaped by quoteIdentifier(); values never pass through
+ * the platform, they are bound.
+ *
+ * Thread-safety: immutable.
+ *
+ * Side effects: none; every method returns SQL text or a capability.
+ *
+ * Example:
+ *
+ *     $sql = $connection->platform->getUpsertSql('stock', ['sku', 'qty'], ['sku']);
+ *     $connection->executeStatement($sql, ['A-1', 5]);
+ *
+ * References: ADR-003 (version-aware platforms); SPEC-001 §6.
+ *
+ * @see https://www.postgresql.org/docs/current/sql-insert.html#SQL-ON-CONFLICT
+ */
 interface Platform
 {
     public PlatformVersion $version { get; }

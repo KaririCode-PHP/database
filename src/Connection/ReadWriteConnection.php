@@ -11,20 +11,33 @@ use KaririCode\Database\Contract\QueryBuilder;
 use KaririCode\Database\Contract\Result;
 use KaririCode\Database\Enum\TransactionIsolationLevel;
 
-// ── ReadWriteConnection ──────────────────────────────────────────────
-//
-// Transparent read/write routing decorator.
-//
-// Routing rules (ref: Doctrine PrimaryReadReplicaConnection):
-// - executeQuery()     → replica (if not in primary-only mode)
-// - executeStatement() → primary (forces primary-only mode)
-// - beginTransaction() → primary (forces primary-only for duration)
-// - Sticky: once primary is used, all ops go to primary
-//
-// Ref: Doctrine DBAL issue #9225 — sequence reads fail on replica
-// Ref: Symfony AI issue #1283 — DBAL routing rules documented
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Routes reads to a replica and everything else to the primary, so read
+ * traffic scales out while writes, transactions and locks stay on one
+ * server. After the first write the connection is sticky by default:
+ * later reads go to the primary too, so a request reads its own writes
+ * despite replication lag.
+ *
+ * Preconditions: the replicas replicate the primary. With sticky false
+ * reads leave the primary as soon as no transaction is open, so only use
+ * it where stale reads right after a write are acceptable.
+ * createQueryBuilder() builds on the primary.
+ *
+ * Thread-safety: holds routing state for one request; not safe to share.
+ *
+ * Side effects: delegates to the connections it routes to; one replica is
+ * picked at random on the first read and kept.
+ *
+ * Example:
+ *
+ *     $connection = new ReadWriteConnection($primary, [$replicaA, $replicaB]);
+ *     $connection->executeQuery('SELECT * FROM products');       // a replica
+ *     $connection->insert('orders', ['product_id' => 1]);        // primary, from now on for reads too
+ *
+ * References: ADR-006 (read/write splitting); SPEC-001 §4.3.
+ *
+ * @see https://dev.mysql.com/doc/refman/8.4/en/replication-solutions-scaleout.html
+ */
 final class ReadWriteConnection implements Connection
 {
     public readonly Platform $platform;

@@ -4,7 +4,25 @@ declare(strict_types=1);
 
 namespace KaririCode\Database\Enum;
 
-// Backed: E-003 justified — SQL standard numeric isolation levels.
+/**
+ * The four SQL isolation levels, with the SQL name each platform writes
+ * into its SET statement.
+ *
+ * Preconditions: SQLite offers only ReadUncommitted and Serializable; the
+ * others raise PlatformException 6080 there.
+ *
+ * Thread-safety: an enum; immutable.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     $connection->setTransactionIsolation(TransactionIsolationLevel::RepeatableRead);
+ *
+ * References: SPEC-001 §4.2 (GAP-DB-04).
+ *
+ * @see https://www.postgresql.org/docs/current/transaction-iso.html
+ */
 enum TransactionIsolationLevel: int
 {
     case ReadUncommitted = 1;

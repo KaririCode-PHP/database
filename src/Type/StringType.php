@@ -7,6 +7,25 @@ namespace KaririCode\Database\Type;
 use KaririCode\Database\Contract\Platform;
 use KaririCode\Database\Contract\TypeConverter;
 
+/**
+ * Stores text up to a length as VARCHAR(length) on the servers and TEXT on
+ * SQLite, which has no length limit.
+ *
+ * Preconditions: the value is a string or a scalar that converts to one;
+ * the length defaults to 255 and is checked by the server, not here.
+ *
+ * Thread-safety: stateless.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     (new StringType())->getSqlDeclaration(['length' => 120], $platform);   // VARCHAR(120)
+ *
+ * References: ADR-007; SPEC-001 §2.4.
+ *
+ * @see https://www.postgresql.org/docs/current/datatype-character.html
+ */
 final readonly class StringType implements TypeConverter
 {
     #[\Override]

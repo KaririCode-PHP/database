@@ -7,24 +7,26 @@ namespace KaririCode\Database\ValueObject;
 use KaririCode\Database\Exception\QueryException;
 use KaririCode\Database\Type\ScalarValue;
 
-// ── ResultRow ────────────────────────────────────────────────────────
-
 /**
  * Typed read access to one fetched row (catalog queries, introspection),
- * so a missing column or an unexpected value type fails loudly instead
- * of flowing on as mixed.
+ * so a missing column or an unexpected value type fails loudly instead of
+ * flowing on as mixed.
  *
  * Preconditions: every column read is present in the row; a missing
- *   column throws QueryException (6041). A NULL read through a
- *   non-nullable accessor becomes '' / 0 / false.
- * Side effects: none.
+ * column throws QueryException (6041). A NULL read through a non-nullable
+ * accessor becomes '' / 0 / false.
+ *
  * Thread-safety: immutable.
  *
- * Example:
- *   $row = new ResultRow(['COLUMN_NAME' => 'id', 'NON_UNIQUE' => 0]);
- *   $unique = $row->int('NON_UNIQUE') === 0;
+ * Side effects: none.
  *
- * Spec V4.3.3 §9.1: final readonly value object.
+ * Example:
+ *
+ *     $row = new ResultRow(['COLUMN_NAME' => 'id', 'NON_UNIQUE' => 0]);
+ *     $unique = $row->int('NON_UNIQUE') === 0;
+ *
+ * References: Spec V4.3.3 §9.1 (final readonly value object); ADR-008.
+ *
  * @see https://www.php.net/manual/en/pdostatement.fetch.php
  * @since 4.3.0
  */

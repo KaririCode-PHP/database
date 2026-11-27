@@ -7,6 +7,25 @@ namespace KaririCode\Database\Type;
 use KaririCode\Database\Contract\Platform;
 use KaririCode\Database\Contract\TypeConverter;
 
+/**
+ * Stores UUIDs as text: the native UUID type on PostgreSQL, CHAR(36)
+ * elsewhere.
+ *
+ * Preconditions: the value is the canonical 36-character form; the type
+ * does not validate it, PostgreSQL does.
+ *
+ * Thread-safety: stateless.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     (new UuidType())->getSqlDeclaration([], $mysqlPlatform);   // CHAR(36)
+ *
+ * References: ADR-007; SPEC-001 §2.4.
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc9562
+ */
 final readonly class UuidType implements TypeConverter
 {
     #[\Override]

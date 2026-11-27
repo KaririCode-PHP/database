@@ -25,19 +25,39 @@ use KaririCode\Database\Type\ScalarValue;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\SimpleCache\CacheInterface;
 
-// ── DefaultConnection ────────────────────────────────────────────────
-//
-// Rich wrapper over DriverConnection. Provides:
-// - Transaction nesting via savepoints (ADR-005)
-// - Advisory lock convenience (ISSUE-009)
-// - Result caching (GAP-DB-01)
-// - Transaction isolation control (GAP-DB-04)
-// - Event emission (GAP-DB-07)
-// - Health check ping (GAP-CROSS-01)
-//
-// Ref: Doctrine DBAL 4.4 Connection (wrapper layer)
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * The connection applications use: runs queries and statements over a
+ * driver session, nests transactions through savepoints, sets the session
+ * isolation, takes advisory locks, caches query results through PSR-16 and
+ * reports what it does as PSR-14 events.
+ *
+ * Preconditions: SQL and identifiers come from code; values are bound.
+ * insert(), update() and delete() write table and column names unquoted.
+ * A nested beginTransaction() needs a platform with savepoints
+ * (PlatformException 6081). advisoryLock() blocks until the lock is free;
+ * on PostgreSQL the locks are transaction-scoped, so take them inside a
+ * transaction.
+ *
+ * Thread-safety: one session with a nesting counter; not safe to share
+ * between concurrent requests.
+ *
+ * Side effects: talks to the server; dispatches QueryExecuted,
+ * ConnectionError and the transaction events, whose payloads include the
+ * bound values; executeCacheQuery() reads and writes the cache. A failed
+ * statement is rethrown after its ConnectionError event.
+ *
+ * Example:
+ *
+ *     $total = $connection->transactional(static function (DefaultConnection $c): mixed {
+ *         $c->executeStatement('UPDATE accounts SET balance = balance - ? WHERE id = ?', ['10.00', 7]);
+ *         return $c->executeQuery('SELECT balance FROM accounts WHERE id = ?', [7])->fetchOne();
+ *     });
+ *
+ * References: ADR-001; ADR-005 (savepoints, BUG-006); ADR-010 (result
+ * cache); ADR-013 (events); SPEC-001 §4.
+ *
+ * @see https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS
+ */
 final class DefaultConnection implements Connection
 {
     private const string CACHE_MISS = "\0kariricode.database.cache-miss";
@@ -364,7 +384,10 @@ final class DefaultConnection implements Connection
     public function ping(): bool
     {
         try {
-            $this->driverConnection->exec('SELECT 1');
+            // prepare/execute e free(): exec() com SELECT deixa o resultado pendente
+            // no MySQL e a consulta seguinte falha com o erro 2014.
+            $result = $this->driverConnection->prepare('SELECT 1')->execute();
+            $result->free();
 
             return true;
         } catch (\Throwable) {

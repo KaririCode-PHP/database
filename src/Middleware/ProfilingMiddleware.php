@@ -12,12 +12,28 @@ use KaririCode\Database\Contract\Statement;
 use KaririCode\Database\ValueObject\ConnectionParams;
 use KaririCode\Database\ValueObject\QueryResult;
 
-// ── ProfilingMiddleware ──────────────────────────────────────────────
-//
-// Collects QueryResult VOs for all executed queries. Useful for
-// debug toolbars, slow query detection, and observability bridges.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Records every statement as a QueryResult (SQL, parameters passed to
+ * execute(), duration, row count) and calls back on slow ones, for debug
+ * toolbars and slow-query alerts.
+ *
+ * Preconditions: the threshold is in milliseconds. Values bound one by one
+ * are not captured, only those passed to execute().
+ *
+ * Thread-safety: collects profiles; one instance per request, or reset()
+ * between requests in a long-running worker, since the list only grows.
+ *
+ * Side effects: keeps every profile in memory and calls the callback.
+ *
+ * Example:
+ *
+ *     $profiler = new ProfilingMiddleware(250.0, static fn(QueryResult $slow) => $logger->warning($slow->sql));
+ *     $factory = new ConnectionFactory([$profiler]);
+ *
+ * References: ADR-002; SPEC-001 §2.1.
+ *
+ * @see https://www.php.net/manual/en/function.hrtime.php
+ */
 final class ProfilingMiddleware implements Middleware
 {
     /** @var array<int, QueryResult> */

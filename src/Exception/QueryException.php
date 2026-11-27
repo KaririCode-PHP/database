@@ -6,25 +6,34 @@ namespace KaririCode\Database\Exception;
 
 use KaririCode\Contract\Exception\Runtime;
 
-// ── QueryException ───────────────────────────────────────────────────
-
 /**
  * A statement failed: syntax or access error, constraint violation,
- * deadlock or lock timeout. The SQLSTATE is exposed as $sqlState.
+ * deadlock, lock timeout, a builder in an invalid state or a missing
+ * column. The SQLSTATE of the driver error is exposed as $sqlState.
  *
- * Preconditions: none; instances come only from the named factories
- *   below (the constructor is private).
- * Side effects: none.
+ * Preconditions: none; instances come only from the named factories (the
+ * constructor is private).
+ *
  * Thread-safety: immutable after construction.
  *
- * Family: Contract\Exception\Runtime (Spec V4.3.3 §8.4). Messages carry
- * the [DB_nnnn] code and never echo SQL, driver text, DSNs or values
- * (E-047); the driver error stays on getPrevious().
+ * Side effects: none.
+ *
+ * Family: Contract\Exception\Runtime. Messages carry the [DB_nnnn] code
+ * and never echo SQL, driver text or values (E-047); the driver error
+ * stays on getPrevious().
  *
  * Example:
- *   catch (QueryException $e) { if ($e->getCode() === 6032) { $this->reportDuplicate($e); } }
  *
- * @see https://www.rfc-editor.org/rfc/rfc9110 (status mapping at the edge)
+ *     try {
+ *         $connection->insert('users', ['email' => $email]);
+ *     } catch (QueryException $e) {
+ *         $taken = $e->getCode() === 6032;   // unique violation
+ *     }
+ *
+ * References: Spec V4.3.3 §8.4; ADR-004; SPEC-001 §12 (codes 6030–6041,
+ * 6102).
+ *
+ * @see https://www.postgresql.org/docs/current/errcodes-appendix.html
  * @since 4.3.0
  */
 final class QueryException extends \RuntimeException implements DatabaseException, Runtime

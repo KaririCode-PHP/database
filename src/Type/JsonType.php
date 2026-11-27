@@ -8,6 +8,27 @@ use KaririCode\Database\Contract\Platform;
 use KaririCode\Database\Contract\TypeConverter;
 use KaririCode\Database\Exception\TypeConversionException;
 
+/**
+ * Stores a JSON document: JSONB on PostgreSQL, JSON on MySQL, text on
+ * SQLite. Values are encoded with JSON_THROW_ON_ERROR and unescaped
+ * Unicode, and decoded into arrays.
+ *
+ * Preconditions: the value can be JSON-encoded; objects come back as
+ * associative arrays, and PostgreSQL JSONB does not keep key order or
+ * whitespace.
+ *
+ * Thread-safety: stateless.
+ *
+ * Side effects: none; an invalid document throws \JsonException.
+ *
+ * Example:
+ *
+ *     (new JsonType())->convertToDatabaseValue(['tags' => ['açaí']], $platform);   // '{"tags":["açaí"]}'
+ *
+ * References: ADR-007; SPEC-001 §2.4.
+ *
+ * @see https://www.rfc-editor.org/rfc/rfc8259
+ */
 final readonly class JsonType implements TypeConverter
 {
     #[\Override]

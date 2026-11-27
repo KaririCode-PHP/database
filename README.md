@@ -29,12 +29,6 @@ ext-pdo_pgsql
 ext-pdo_sqlite
 ```
 
-`kariricode/contract` 2.11.0 is not tagged on Packagist yet; until it is, add a path repository pointing at a local copy:
-
-```bash
-composer config repositories.kariricode-contract '{"type":"path","url":"../kariricode-contract","options":{"symlink":false}}'
-```
-
 ## Quick Start
 
 ```php
@@ -78,17 +72,20 @@ $conn->transactional(function ($conn) {
 
 ## Connection Management
 
-Named connections with lazy initialization:
+Named connections with lazy initialization, from `ConnectionParams` or a DSN:
 
 ```php
 $manager = new ConnectionRegistry([
     'primary' => new ConnectionParams(driver: 'pdo_pgsql', ...),
-    'analytics' => new ConnectionParams(driver: 'pdo_mysql', ...),
+    'analytics' => 'mysql://app:secret@analytics:3306/events?charset=utf8mb4',
+    'cache' => 'sqlite:////var/lib/app/cache.db',   // absolute; sqlite:///cache.db is relative
 ]);
 
 $primary = $manager->get('primary');
 $analytics = $manager->get('analytics');
 ```
+
+With a PSR-14 dispatcher on the factory, each connect is reported as `ConnectionEstablished` (with the registry name) or `ConnectionError`.
 
 ## Read/Write Splitting
 
@@ -134,14 +131,18 @@ Decorate drivers with cross-cutting concerns:
 ```php
 use KaririCode\Database\Middleware\LoggingMiddleware;
 use KaririCode\Database\Middleware\RetryMiddleware;
+use KaririCode\Database\Middleware\TenancyMiddleware;
+use KaririCode\Database\Resilience\TransientFailureRetryPolicy;
 
+// Outermost first (ADR-002): Logging, Profiling, Retry, Tenancy.
 $factory = new ConnectionFactory([
-    new LoggingMiddleware(function (string $sql, array $params, float $ms) {
-        echo "[{$ms}ms] {$sql}\n";
-    }),
-    new RetryMiddleware(maxRetries: 3, retryableExceptions: ['deadlock', 'connectionLost']),
+    new LoggingMiddleware($psrLogger),
+    new RetryMiddleware(new TransientFailureRetryPolicy(maxAttempts: 3)),
+    new TenancyMiddleware(static fn(): ?string => $tenant->schema()),
 ]);
 ```
+
+`RetryMiddleware` retries only the connect, never a statement, so a retry cannot repeat a write.
 
 ## Query Builder
 
@@ -179,6 +180,8 @@ Every exception implements `KaririCode\Database\Exception\DatabaseException` and
 
 Messages carry a `[DB_nnnn]` code and never echo SQL, driver text, DSNs or values; the driver error stays on `getPrevious()`, and `QueryException::$sqlState` exposes the SQLSTATE. Full map: SPEC §12.
 
+Driver errors are converted where they happen (ADR-004): a duplicate key is `QueryException` 6032 on every vendor, wrong credentials are `ConfigurationException` 6012, an unreachable server is `ConnectionException` 6010. No `PDOException` reaches the caller.
+
 ## PSR Integration
 
 | Concern | Port | Where |
@@ -197,6 +200,16 @@ Messages carry a `[DB_nnnn]` code and never echo SQL, driver text, DSNs or value
 | PostgreSQL 12+ | `pdo_pgsql`     | `PostgreSqlPlatform`|
 | SQLite 3.8+    | `pdo_sqlite`    | `SqlitePlatform`    |
 
+CI runs the server suites (`tests/Integration/Server`) against PostgreSQL 16 and MariaDB 10.11, and the rest of the suite on SQLite; the older versions above are what the platforms detect, not what CI runs. To run the server suites locally, point the environment at your servers:
+
+```bash
+export KARIRICODE_DATABASE_PGSQL_URL='pgsql://user:pass@127.0.0.1:5432/test'
+export KARIRICODE_DATABASE_MYSQL_URL='mysql://user:pass@127.0.0.1:3306/test'
+composer test
+```
+
+Without them those tests are skipped.
+
 ## Ecosystem Position
 
 `kariricode/database` is the DBAL foundation layer:
@@ -214,18 +227,21 @@ It replaces duplicated PDO wrappers in ORM, DataFlow, and Tenancy with a single,
 
 | Layer      | Files | Purpose                                   |
 |------------|------:|-------------------------------------------|
-| Contract   | 10    | Interfaces (promoted to kariricode/contract in Phase 2) |
-| Driver     | 10    | Thin PDO wrappers + exception converters  |
-| Connection | 4     | Rich wrapper: transactions, advisory locks, type conversion |
+| Contract   | 12    | Interfaces (promoted to kariricode/contract in Phase 2) |
+| Driver     | 10    | PDO drivers, wrappers and exception converters |
+| Connection | 4     | Transactions, savepoints, advisory locks, events; registry, factory, read/write routing |
+| Cache      | 2     | Result cache profile and cached result    |
 | Query      | 3     | Entity-agnostic SQL query builder         |
 | Middleware | 4     | Decoration: logging, profiling, tenancy, retry |
 | Platform   | 3     | SQL dialect abstraction                   |
-| Type       | 14    | PHP↔DB type conversion registry           |
+| Type       | 20    | PHP↔DB type conversion registry           |
 | Schema     | 3     | Read-only metadata introspection          |
-| ValueObject| 6     | Immutable configuration and result objects |
-| Enum       | 6     | Driver types, parameter types, column types |
-| Exception  | 7     | Semantic exception hierarchy with factories |
-| **Total**  | **~73** |                                          |
+| ValueObject| 8     | Immutable configuration and metadata objects |
+| Enum       | 7     | Driver, parameter, column and isolation types |
+| Event      | 6     | PSR-14 connection, query and transaction events |
+| Exception  | 8     | Semantic exception hierarchy with factories |
+| Resilience, DSN | 2 | Retry policy; DATABASE_URL parser     |
+| **Total**  | **92** |                                          |
 
 ## Documentation
 
@@ -241,6 +257,12 @@ It replaces duplicated PDO wrappers in ORM, DataFlow, and Tenancy with a single,
 | [ADR-007](docs/adr/ADR-007-type-registry-extensible.md) | Type registry |
 | [ADR-008](docs/adr/ADR-008-schema-inspector-read-only.md) | Schema inspector |
 | [ADR-009](docs/adr/ADR-009-sql-query-builder-in-dbal.md) | SQL query builder in DBAL |
+| [ADR-010](docs/adr/ADR-010-result-cache.md) | Result cache |
+| [ADR-011](docs/adr/ADR-011-dsn-parser.md) | DSN parser |
+| [ADR-012](docs/adr/ADR-012-bulk-insert.md) | Bulk insert |
+| [ADR-013](docs/adr/ADR-013-connection-events.md) | Connection events |
+| [ADR-014](docs/adr/ADR-014-spec-naming.md) | Spec naming |
+| [ADR-015](docs/adr/ADR-015-spec-v433-migration.md) | Spec V4.3.3 migration |
 | [ADR-016](docs/adr/ADR-016-toolchain-through-kcode.md) | Gates through KaririCode Devkit; mutation floor |
 | [Competitive Analysis](docs/COMPETITIVE-ANALYSIS.md) | vs Doctrine DBAL, Laravel DB |
 | [Critical Review](docs/CRITICAL-REVIEW.md) | 14 issues found and resolved |

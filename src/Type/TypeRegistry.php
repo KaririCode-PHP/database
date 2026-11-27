@@ -8,16 +8,30 @@ use KaririCode\Database\Exception\ConfigurationException;
 use KaririCode\Database\Contract\TypeConverter;
 use KaririCode\Database\Exception\TypeConversionException;
 
-// ── TypeRegistry ─────────────────────────────────────────────────────
-//
-// Flyweight registry of type converters. Ships with 13 built-in
-// types. Custom types registered via register().
-//
-// Ref: Doctrine DBAL 4.4 — "Types are flyweights. There is only
-// ever one instance of a type and it is not allowed to contain
-// any state."
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Looks up the converter for a type name: the 18 built-ins (integer,
+ * bigint, smallint, float, decimal, string, ascii_string, text, boolean,
+ * datetime, datetimetz, date, time, dateinterval, json, uuid, binary,
+ * blob) plus any the application registers.
+ *
+ * Preconditions: an unknown name is ConfigurationException 6121;
+ * register() replaces a converter of the same name, built-ins included.
+ *
+ * Thread-safety: register() mutates the registry; set it up during boot
+ * and share it read-only afterwards.
+ *
+ * Side effects: none.
+ *
+ * Example:
+ *
+ *     $registry = new TypeRegistry();
+ *     $registry->register('money', new MoneyType());
+ *     $amount = $registry->get('money')->convertToPhpValue($row['amount'], $connection->platform);
+ *
+ * References: ADR-007 (extensible type registry); SPEC-001 §2.4.
+ *
+ * @see https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html
+ */
 final class TypeRegistry
 {
     /** @var array<string, TypeConverter> */

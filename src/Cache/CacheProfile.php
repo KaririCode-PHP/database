@@ -6,12 +6,29 @@ namespace KaririCode\Database\Cache;
 
 use Psr\SimpleCache\CacheInterface;
 
-// ── CacheProfile ─────────────────────────────────────────────────────
-//
-// Configuration for per-query result caching.
-// Ref: Doctrine DBAL 4.4 QueryCacheProfile.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * How one query is cached by executeCacheQuery(): for how long, under which
+ * key and in which PSR-16 store. The default key is a SHA-256 of the SQL,
+ * the parameters and their types, so different parameters never share an
+ * entry.
+ *
+ * Preconditions: ttl in seconds, 0 for the store's default lifetime; a
+ * fixed key is the caller's to keep unique. Parameters are serialized only
+ * to be hashed, never unserialized.
+ *
+ * Thread-safety: immutable.
+ *
+ * Side effects: none; the connection does the caching.
+ *
+ * Example:
+ *
+ *     $profile = new CacheProfile(ttl: 300, cache: $psr16Cache);
+ *     $countries = $connection->executeCacheQuery('SELECT code, name FROM countries', [], [], $profile)->fetchAllKeyValue();
+ *
+ * References: ADR-010 (result cache); SPEC-001 §4.1.
+ *
+ * @see https://www.php-fig.org/psr/psr-16/
+ */
 final readonly class CacheProfile
 {
     /**

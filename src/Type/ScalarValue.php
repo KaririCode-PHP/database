@@ -6,8 +6,6 @@ namespace KaririCode\Database\Type;
 
 use KaririCode\Database\Exception\TypeConversionException;
 
-// ── ScalarValue ──────────────────────────────────────────────────────
-
 /**
  * Single point where loosely typed values (driver results, cache entries,
  * catalog rows) become PHP scalars. A value that cannot be represented
@@ -15,13 +13,18 @@ use KaririCode\Database\Exception\TypeConversionException;
  * ((int) 'abc' used to become 0).
  *
  * Preconditions: $dbType names the target type for the error message.
- * Side effects: none.
+ *
  * Thread-safety: stateless.
  *
- * Example:
- *   $length = ScalarValue::asInt($row['CHARACTER_MAXIMUM_LENGTH'], 'integer');
+ * Side effects: none.
  *
- * Spec V4.3.3 §8.4: failures surface as a contract family (Runtime).
+ * Example:
+ *
+ *     $length = ScalarValue::asInt($row['CHARACTER_MAXIMUM_LENGTH'], 'integer');
+ *
+ * References: Spec V4.3.3 §8.4 (failures as a contract family, Runtime);
+ * ADR-007.
+ *
  * @see https://www.php.net/manual/en/language.types.type-juggling.php
  * @since 4.3.0
  */
