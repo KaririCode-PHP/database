@@ -1,0 +1,9 @@
+{
+    "parameters": {
+        "KaririCode\\Database\\ValueObject\\ConnectionParams::__construct": "Value object built with named arguments; each field is independent configuration. A Parameter Object would only wrap the value object itself.",
+        "KaririCode\\Database\\ValueObject\\ColumnMetadata::__construct": "Value object mirroring information_schema columns; built with named arguments by the schema inspectors.",
+        "KaririCode\\Database\\ValueObject\\ForeignKeyMetadata::__construct": "Value object mirroring a foreign-key definition; built with named arguments.",
+        "KaririCode\\Database\\ValueObject\\TableMetadata::__construct": "Value object aggregating columns, indexes and keys; built with named arguments.",
+        "KaririCode\\Database\\Event\\QueryExecuted::__construct": "Event value object (PSR-14); every field is part of the observed fact."
+    }
+}
