@@ -5,7 +5,8 @@ declare(strict_types=1);
 // Orcamentos da Spec V4.3.3 §13 medidos na arvore sintatica (nikic/php-parser),
 // porque o PHPMD 2.15 nao le PHP 8.4 (propriedades em interface, private(set)).
 
-require __DIR__ . '/../vendor/autoload.php';
+// nikic/php-parser comes with the toolchain kcode installs (ADR-016).
+require __DIR__ . '/../.kcode/vendor/autoload.php';
 
 use PhpParser\Node;
 use PhpParser\Node\Expr;

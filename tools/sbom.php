@@ -54,6 +54,8 @@ function components(mixed $packages, string $scope): array
 
 $root = dirname(__DIR__);
 $lock = readJson($root . '/composer.lock');
+// O toolchain vem do kcode (ADR-016); o lock dele lista os componentes de desenvolvimento.
+$toolchain = is_file($root . '/.kcode/composer.lock') ? readJson($root . '/.kcode/composer.lock') : [];
 $manifest = readJson($root . '/composer.json');
 $hex = bin2hex(random_bytes(16));
 $hex[12] = '4';
@@ -69,6 +71,6 @@ $bom = [
         'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
         'component' => ['type' => 'library', 'name' => $name, 'purl' => "pkg:composer/{$name}", 'licenses' => licenses([$manifest['license'] ?? ''])],
     ],
-    'components' => [...components($lock['packages'] ?? [], 'required'), ...components($lock['packages-dev'] ?? [], 'optional')],
+    'components' => [...components($lock['packages'] ?? [], 'required'), ...components($lock['packages-dev'] ?? [], 'optional'), ...components($toolchain['packages'] ?? [], 'optional')],
 ];
 echo json_encode($bom, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), "\n";

@@ -1,7 +1,12 @@
+# kcode installs the toolchain into .kcode/ and runs this file (ADR-016).
 parameters:
     level: max
     paths:
         - src
         - tests
         - tools
+    # PHPUnit for the tests, nikic/php-parser for tools/complexity.php.
+    scanDirectories:
+        - .kcode/vendor/phpunit/phpunit/src
+        - .kcode/vendor/nikic/php-parser/lib
     tmpDir: build/phpstan
