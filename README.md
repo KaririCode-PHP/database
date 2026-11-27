@@ -241,6 +241,7 @@ It replaces duplicated PDO wrappers in ORM, DataFlow, and Tenancy with a single,
 | [ADR-007](docs/adr/ADR-007-type-registry-extensible.md) | Type registry |
 | [ADR-008](docs/adr/ADR-008-schema-inspector-read-only.md) | Schema inspector |
 | [ADR-009](docs/adr/ADR-009-sql-query-builder-in-dbal.md) | SQL query builder in DBAL |
+| [ADR-016](docs/adr/ADR-016-toolchain-through-kcode.md) | Gates through KaririCode Devkit; mutation floor |
 | [Competitive Analysis](docs/COMPETITIVE-ANALYSIS.md) | vs Doctrine DBAL, Laravel DB |
 | [Critical Review](docs/CRITICAL-REVIEW.md) | 14 issues found and resolved |
 

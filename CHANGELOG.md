@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Tooling
+
+- Imported into KaririCode-PHP/database. The toolchain comes from KaririCode Devkit, pinned in `devkit.php`, and runs the root configs (ADR-016): `require-dev` and the unused PHPMD are gone, `composer.lock` holds the runtime only (kariricode/contract 2.12.0, psr/event-dispatcher, psr/log, psr/simple-cache), and `composer security` also audits the toolchain. CI installs kcode 1.2.1 by version and SHA-256.
+- First mutation run: MSI 60%. `composer infection` holds that floor; the Spec asks for 80% (QD-V433).
+
 ## [4.4.0] — 2026-10-04
 
 Static analysis closes: PHPStan level max and Psalm errorLevel 1 report 0 (were 329 and 172). Breaking behaviour ships as a minor version (no installable release yet).

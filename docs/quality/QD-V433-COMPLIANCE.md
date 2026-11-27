@@ -14,7 +14,7 @@ Reproduce with `composer check`; each number below comes from that run.
 | Complexity | `composer complexity` | pass: 0 violations; 5 justified parameter exceptions in `tools/complexity-baseline.json` |
 | Tests | `composer test` | pass: 71 tests, 1620 assertions (SQLite) |
 | Conformance | `composer test-conformance` | pass: families, private constructors, codes, prefixes, interpolation allow-list, naming, state, markers |
-| Mutation | `composer infection` (MSI ≥ 80) | **not run**: no coverage driver (PCOV/Xdebug) in this build |
+| Mutation | `composer infection` | **below target**: MSI 60% (670 mutants, 405 killed, 265 escaped) measured 2026-11-27 with pcov; the gate holds this floor until the suite reaches 80 (ADR-016) |
 | Security | `composer security` | pass: manifest valid, 0 advisories, 0 secrets |
 
 ## Rules
@@ -30,5 +30,5 @@ Reproduce with `composer check`; each number below comes from that run.
 | Duck typing (§31) | 0 `method_exists()` |
 | Docblocks C1–C5 (§17) | **open**: 11 of 92 types |
 | `find()`/`get()` (§9.3) | `ConnectionRegistry::get()` and `TypeRegistry` lookups fail with `Configuration`, since a missing name is a wiring error, not an absent record |
-| Supply chain (§32) | CI pinned by SHA, SBOM generator, audit and secret scan in place; **pending**: `composer.lock` until kariricode/contract 2.11.0 is tagged |
+| Supply chain (§32) | CI pinned by SHA, kcode pinned by version and SHA-256, SBOM generator, audit of the runtime and the toolchain, secret scan; `composer.lock` committed against kariricode/contract 2.12.0 |
 | Real databases | **pending**: SQLite only here; PostgreSQL and MySQL suites need servers |

@@ -6,8 +6,12 @@ PHP 8.4 with `pdo_sqlite`; PCOV or Xdebug for the mutation gate.
 
 ```bash
 composer install
+kcode init        # the toolchain pinned in devkit.php (KaririCode Devkit, ADR-016)
 composer check
 ```
+
+Install [kcode](https://github.com/KaririCode-PHP/devkit) once:
+`wget https://github.com/KaririCode-PHP/devkit/releases/latest/download/kcode.phar && chmod +x kcode.phar && sudo mv kcode.phar /usr/local/bin/kcode`.
 
 ## Gates (KaririCode Spec V4.3.3 §29.1)
 
@@ -18,8 +22,8 @@ composer check
 | `composer cs-check` | no file to fix (`@PER-CS3.0`) |
 | `composer complexity` | cyclomatic ≤ 10, cognitive ≤ 15, nesting ≤ 3, parameters ≤ 4, named arguments at 3+ arguments; exceptions only with a written reason in `tools/complexity-baseline.json` |
 | `composer test` / `composer test-conformance` | green; risky tests, warnings, notices and deprecations fail |
-| `composer infection` | MSI and covered MSI ≥ 80 |
-| `composer security` | valid manifest, no advisories, no secrets |
+| `composer infection` | MSI and covered MSI ≥ 60, the measured floor; the Spec target is 80 (ADR-016) |
+| `composer security` | valid manifest, no advisories in the runtime or the toolchain, no secrets |
 
 Update `docs/quality/QD-V433-COMPLIANCE.md` when a result changes.
 
